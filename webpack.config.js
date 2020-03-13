@@ -4,17 +4,76 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const {CleanWebpackPlugin} = require('clean-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const OptimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
 
+// задаем переменную с указанием режима сборки
+const isDev = process.env.NODE_ENV === 'development';
+
+// экспортирует объект для поля optimization
+const optimization = () => {
+	const config = {
+		splitChunks: {
+			chunks: "all"
+		}
+	}
+	if(!isDev) {
+		config.minimizer = [
+			new OptimizeCssAssetsPlugin(),
+			new TerserPlugin()
+		]
+	}
+	return config;
+}
+
+// возвращает строку для динамического формирования имени файла с хешем или без него, в зависимости от режима. Юзается в оутпуте и плагинах
+const filename = ext => isDev ? `[name].${ext}` : `[name].[hash:5].${ext}`;
+
+// это чтоб код обработчиков был компактнее
+// будет возвращать массив с набором лоадеров для стилей в зависимости от типа входящего файла
+const cssLoaders = (extra) => {
+	const loaders =  [
+		{
+			loader: MiniCssExtractPlugin.loader,
+			options: {
+				// true или false в зависимости от режима, нам надо только в разработке
+				hmr: isDev,
+				reloadAll: true
+			}
+		},
+		'css-loader'
+	];
+	// если extra указан, то добавить его в массив обработчиков
+	extra && loaders.push(extra);
+	return loaders;
+}
+
+// возвращает объект с опциями для бейбла
+const babelOptions = (optionalPreset) => {
+	const options = {
+		presets: [
+			'@babel/preset-env',
+
+		],
+		plugins: [
+			'@babel/plugin-proposal-class-properties'
+		]
+	};
+	optionalPreset && options.presets.push(optionalPreset);
+	return options;
+};
+
+// собсно объект конфигурации
 module.exports = {
 	// определяет рабочую директорию (в нашем случае src)
 	context: path.resolve(__dirname, "src"),
 	mode: "development",
 	entry: {
-		main: './index.js',
-		analytics: './analytics.js'
+		main: ['@babel/polyfill', './index.js'],
+		analytics: './analytics.ts'
 	},
 	output: {
-		filename: '[name].[contenthash].js',
+		filename: filename('js'),
 		path: path.resolve(__dirname, "dist"),
 	},
 	// объект расширений
@@ -28,7 +87,10 @@ module.exports = {
 	},
 	plugins: [
 		new HtmlWebpackPlugin({
-			template: "./index.html"
+			template: "./index.html",
+			minify: {
+				collapseWhitespace: !isDev
+			}
 		}),
 		new CleanWebpackPlugin(),
 		new CopyWebpackPlugin(
@@ -42,21 +104,43 @@ module.exports = {
 			]
 		),
 		new MiniCssExtractPlugin({
-			filename: '[name].[contenthash].css'
+			filename: filename('css')
 		})
 	],
 	module: {
 		// в правилах указываем объекты для описания типа лоадера
 		rules: [
 			{
+				test: /\.js$/,
+				exclude: /node_modules/,
+				loader: {
+					loader: 'babel-loader',
+					options: babelOptions(),
+				}
+			},
+			{
+				test: /\.ts$/,
+				exclude: /node_modules/,
+				loader: {
+					loader: 'babel-loader',
+					options: babelOptions("@babel/preset-typescript"),
+				}
+			},
+			{
+				test: /\.jsx$/,
+				exclude: /node_modules/,
+				loader: {
+					loader: 'babel-loader',
+					options: babelOptions("@babel/preset-react"),
+				}
+			},
+			{
 				test: /\.css$/,
-				use: [
-					{
-						loader: MiniCssExtractPlugin.loader,
-						options: {}
-					},
-					'css-loader'
-				]
+				use: cssLoaders() // придет массив с обработчиками, тут без дополнительных
+			},
+			{
+				test: /\.s[ac]ss$/,
+				use: cssLoaders('sass-loader') // придет массив с обработчиками, тут дополнительно sass-loader
 			},
 			{
 				test: /\.(png|jpe?g|gif|svg)$/,
@@ -76,12 +160,9 @@ module.exports = {
 			}
 		]
 	},
-	optimization: {
-		splitChunks: {
-			chunks: "all"
-		}
-	},
+	optimization: optimization(),
 	devServer: {
 		port: 3033,
+		hot: isDev,
 	}
 };

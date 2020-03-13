@@ -1,10 +1,11 @@
 import * as $ from 'jquery';
 import Post from '@models/Post';
-import './styles/styles.css';
+import './styles/styles.scss';
 import json from './assets/json';
-import WebpackLogo from './assets/logo.png'
-import xmlFile from './assets/data.xml'
-import csvFile from './assets/finance-csv.csv'
+import WebpackLogo from './assets/logo.png';
+import xmlFile from './assets/data.xml';
+import csvFile from './assets/finance-csv.csv';
+import './babel.js';
 
 const post = new Post('Webpack Post Title', WebpackLogo);
 console.log('post.toString(): ', post.toString() );
