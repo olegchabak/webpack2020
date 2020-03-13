@@ -63,13 +63,24 @@ const babelOptions = (optionalPreset) => {
 	return options;
 };
 
+const jsLoaders = () => {
+	const loaders = [
+		{
+			loader: 'babel-loader',
+			options: babelOptions(),
+		}
+	];
+	isDev && loaders.push('eslint-loader');
+	return loaders;
+};
+
 // собсно объект конфигурации
 module.exports = {
 	// определяет рабочую директорию (в нашем случае src)
 	context: path.resolve(__dirname, "src"),
 	mode: "development",
 	entry: {
-		main: ['@babel/polyfill', './index.js'],
+		main: ['@babel/polyfill', './index.jsx'],
 		analytics: './analytics.ts'
 	},
 	output: {
@@ -113,10 +124,7 @@ module.exports = {
 			{
 				test: /\.js$/,
 				exclude: /node_modules/,
-				loader: {
-					loader: 'babel-loader',
-					options: babelOptions(),
-				}
+				use: jsLoaders(),
 			},
 			{
 				test: /\.ts$/,
@@ -164,5 +172,6 @@ module.exports = {
 	devServer: {
 		port: 3033,
 		hot: isDev,
-	}
+	},
+	devtool: isDev ? 'source-map' : ''
 };
