@@ -6,6 +6,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const OptimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
+const {BundleAnalyzerPlugin} = require('webpack-bundle-analyzer');
 
 // задаем переменную с указанием режима сборки
 const isDev = process.env.NODE_ENV === 'development';
@@ -74,6 +75,36 @@ const jsLoaders = () => {
 	return loaders;
 };
 
+//
+const plugins = () => {
+	const base = [
+		new HtmlWebpackPlugin({
+			template: "./index.html",
+			minify: {
+				collapseWhitespace: !isDev
+			}
+		}),
+		new CleanWebpackPlugin(),
+		new CopyWebpackPlugin(
+			// для каждого элемента (папки или файлы) копирования указать объект
+			[
+				// копируем картинку(-и)
+				{
+					from: path.resolve(__dirname, 'src/assets/logo.png'),
+					to: path.resolve(__dirname, 'dist')
+				}
+			]
+		),
+		new MiniCssExtractPlugin({
+			filename: filename('css')
+		})
+	];
+	// if (!isDev) {
+	// 	base.push( new BundleAnalyzerPlugin() );
+	// }
+	return base;
+};
+
 // собсно объект конфигурации
 module.exports = {
 	// определяет рабочую директорию (в нашем случае src)
@@ -96,28 +127,7 @@ module.exports = {
 			"@": path.resolve(__dirname, 'src'),
 		},
 	},
-	plugins: [
-		new HtmlWebpackPlugin({
-			template: "./index.html",
-			minify: {
-				collapseWhitespace: !isDev
-			}
-		}),
-		new CleanWebpackPlugin(),
-		new CopyWebpackPlugin(
-			// для каждого элемента (папки или файлы) копирования указать объект
-			[
-				// копируем картинку(-и)
-				{
-					from: path.resolve(__dirname, 'src/assets/logo.png'),
-					to: path.resolve(__dirname, 'dist')
-				}
-			]
-		),
-		new MiniCssExtractPlugin({
-			filename: filename('css')
-		})
-	],
+	plugins: plugins(),
 	module: {
 		// в правилах указываем объекты для описания типа лоадера
 		rules: [
